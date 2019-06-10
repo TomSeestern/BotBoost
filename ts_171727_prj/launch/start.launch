@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="ex_10_multi_square" type="movesquared.py" name="mover"  output="screen">
+  </node>
+</launch>
