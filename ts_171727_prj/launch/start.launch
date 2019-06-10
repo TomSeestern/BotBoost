@@ -1,8 +1,6 @@
 <launch>
-<<<<<<< HEAD
+  <include file="$(find goal_publisher)/launch/goal_publisher.launch"/>
+  <include file="$(find dist_tracker)/launch/dist_tracker.launch"/>
   <node pkg="ts_171727_prj" type="start.py" name="TurtelLogic"  output="screen">
-=======
-  <node pkg="ex_10_multi_square" type="movesquared.py" name="mover"  output="screen">
->>>>>>> 340c91fd9e4f7955daf2ecafc79fef9c0b6d8655
   </node>
 </launch>
