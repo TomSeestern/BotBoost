@@ -63,6 +63,7 @@ def get_selfheading():
 #Returns the Difference (in Deg) between where the bot is looking and where the Target is.
 def get_degtotarget(targetpoint):
 
+    #Basicly Converts some Quaternion to simple degrees
     self_heading=get_selfheading()
     explicit_quat = [self_heading.x,self_heading.y,self_heading.z,self_heading.w]
     roll, pitch, yaw = tf.transformations.euler_from_quaternion(explicit_quat)
@@ -160,6 +161,7 @@ def do_move(fwd,turn):
 #Turns the Bot, so its Front faces the Target
 def do_turntotarget(targetpoint):
     while(abs(get_degtotarget(targetpoint))>5):
+        #if to right turn left, otherwise turn right
         if get_degtotarget(targetpoint)>1:
             do_move(0,0.2)
         else:
@@ -202,7 +204,7 @@ def do_movetotarget(targetpoint):
                 #hard left - at a corner! left the wall behind us!
                 do_move(0,-0.3)
 
-            #check if nearer on Line to targetpoint, if so -> go directly to Target!
+            #check if near the Line to the targetpoint, if so -> go directly to Target!
             incircumventmode=not(check_isposbetween(targetpoint,startpoint,get_selfpos()) and ((startdistanz-calc_distancebetweenpoints(get_selfpos(),targetpoint)) > 0.3))
         rospy.loginfo("Done Circumventing!")
 
