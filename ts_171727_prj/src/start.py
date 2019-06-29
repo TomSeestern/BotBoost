@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 #Standart Libs
-import rospy
-import actionlib
-import time
-import math
-import tf
-import copy
+import time     #TimeTracking
+import math     #Simple Calculations
+import tf       #Transforming of Coordinated
+import copy     #Coping of Lists
 
 #ros Libs
+import rospy
+import actionlib
 ##Output
 from geometry_msgs.msg import Twist         # Import the Twist message from the geometry_msgs to move the bot
 ##Input
@@ -17,12 +17,14 @@ from gazebo_msgs.msg import ModelStates     # Import Message for Odom
 from goal_publisher.msg import PointArray   # Import Goal Message
 from geometry_msgs.msg import Point         # Import Point Message
 
-
+#Storage for Callback Data
 global scandata
 global modelstatesdata
 global goals
+
 global movex,movez,movexact,movezact
 
+#Callbacks for Data Storage
 def callback_laser(cb_para):
     global scandata
     scandata = cb_para
@@ -38,68 +40,28 @@ def callback_goal(cb_para):
     goals = cb_para
     return
 
-def is_between(a,b,currpos):
-    return abs(calc_distancebetweenpoints(a,currpos) + calc_distancebetweenpoints(currpos,b) - calc_distancebetweenpoints(a,b))<0.4
-
+#Calculate Distance between to Points
 def calc_distancebetweenpoints(p1,p2):
     return abs(math.hypot(p2.x - p1.x, p2.y - p1.y))
 
+#Calculate the Distance to the Goal from Current Position
 def calc_distogoal(goal):
     return calc_distancebetweenpoints(get_selfpos(),goal)
 
+#Get current Bot Pos
 def get_selfpos():
     index=modelstatesdata.name.index("turtlebot3_burger")
     pos = modelstatesdata.pose[index]
     return pos.position
 
+#get Heading of the Bot
 def get_selfheading():
     index=modelstatesdata.name.index("turtlebot3_burger")
     pos = modelstatesdata.pose[index]
     return pos.orientation
 
-def frontisfree(meterlim):
-    #Checks if the 360/5 in front of the bot are free
-    tempdata = LaserScan()
-    tempdata = scandata                 #reading global scandata variable
-
-    leftborder=len(tempdata.ranges)-len(tempdata.ranges)/8
-    rightborder=len(tempdata.ranges)/8
-
-    #rospy.loginfo("scanning l: "+str(leftborder)+" r: "+str(rightborder)+" in deg: "+str(leftborder*tempdata.angle_increment)+" - "+str(leftborder*tempdata.angle_increment))
-    isfree=True
-    i=0
-    for wert in tempdata.ranges:
-        if (i>leftborder or i<rightborder) and (wert<meterlim or wert<tempdata.range_min):
-            isfree=False
-            #rospy.loginfo("Front of Robot is not free! Error bei index: "+str(i))
-            break
-
-        i=i+1
-    return isfree
-
-
-def leftisfree(meterlim):
-    #Checks if the 360/5 in front of the bot are free
-    tempdata = LaserScan()
-    tempdata = scandata                 #reading global scandata variable
-
-    leftborder=(len(tempdata.ranges)/8)*1
-    rightborder=(len(tempdata.ranges)/8)*2
-
-    #rospy.loginfo("scanning l: "+str(leftborder)+" r: "+str(rightborder)+" in deg: "+str(leftborder*tempdata.angle_increment)+" - "+str(leftborder*tempdata.angle_increment))
-    isfree=True
-    i=0
-    for wert in tempdata.ranges:
-        if i>leftborder and i<rightborder and (wert<meterlim or wert<tempdata.range_min):
-            isfree=False
-            #rospy.loginfo("right of Robot is not free! Error bei index: "+str(i))
-            break
-
-        i=i+1
-
-    return isfree
-
-def get_gradzumziel(targetpoint):
+#Returns the Difference (in Deg) between where the bot is looking and where the Target is.
+def get_degtotarget(targetpoint):
 
     self_heading=get_selfheading()
     explicit_quat = [self_heading.x,self_heading.y,self_heading.z,self_heading.w]
@@ -108,22 +70,64 @@ def get_gradzumziel(targetpoint):
     if bot_deg<0:
         bot_deg+=360
 
-    #bottotarget_deg = math.degrees(math.atan2(targetpoint.y-get_selfheading().y , targetpoint.x - get_selfheading().x ))
+    #Absolute Difference between bot and Target
     bottotarget_deg =math.degrees(math.atan2(targetpoint.y-get_selfpos().y , targetpoint.x-get_selfpos().x ))
     if bottotarget_deg<0:
         bottotarget_deg+=360
 
     unterschied = abs(bottotarget_deg) - abs(bot_deg)
-
-
-    #print("Botdeg: "+str(bot_deg)+" toTrg "+str(bottotarget_deg)+" div "+str(unterschied))
     return unterschied
 
-def move(fwd,turn):
+#Checks if the "Pos" Parameter is between Parameter a and b (all 3 are x,y,z Objects)
+def check_isposbetween(a,b,pos):
+    return abs(calc_distancebetweenpoints(a,pos) + calc_distancebetweenpoints(pos,b) - calc_distancebetweenpoints(a,b))<0.4
+
+#Checks if the Front 90Deg. are free within the RangeLimit
+def check_isfrontfree(rangelim):
+
+    tempdata = LaserScan()
+    tempdata = scandata                 #reading global scandata variable
+
+    leftborder=len(tempdata.ranges)-len(tempdata.ranges)/8
+    rightborder=len(tempdata.ranges)/8
+
+    isfree=True
+    i=0
+    for wert in tempdata.ranges:
+        if (i>leftborder or i<rightborder) and (wert<rangelim or wert<tempdata.range_min):
+            isfree=False
+            break
+
+        i=i+1
+    return isfree
+
+#Checks if the Left 45Deg. are free within the RangeLimit
+def check_isleftfree(rangelim):
+
+    tempdata = LaserScan()
+    tempdata = scandata                 #reading global scandata variable
+
+    leftborder=(len(tempdata.ranges)/8)*1
+    rightborder=(len(tempdata.ranges)/8)*2
+
+    isfree=True
+    i=0
+    for wert in tempdata.ranges:
+        if i>leftborder and i<rightborder and (wert<rangelim or wert<tempdata.range_min):
+            isfree=False
+            break
+
+        i=i+1
+
+    return isfree
+
+#Sends the Move (Twist) Command to the Topic
+def do_move(fwd,turn):
     success=True
     global movexact,movezact
     msg = Twist()
 
+    #Slowly accelerate/slow down bot
     if movexact<fwd:
         movexact=movexact+0.05
     elif movexact>fwd:
@@ -139,9 +143,9 @@ def move(fwd,turn):
         movexact=0
         movezact=0
 
+    #Reverse is not Allowed! ;)
     if movexact<0:
         movexact=0
-
 
     msg.linear.x=round(float(movexact),2)
     msg.linear.y=0
@@ -151,80 +155,71 @@ def move(fwd,turn):
     msg.angular.y=0
     pub.publish(msg)
 
-    #print("gew. x: "+str(fwd) + " movexact: "+str(movexact)+" gew. z: "+str(turn) +" movezact: "+str(movezact))
-
     return success
 
-def turn_totarget(targetpoint):
-
-
-    while(abs(get_gradzumziel(targetpoint))>5):
-        if get_gradzumziel(targetpoint)>1:
-            move(0,0.2)
+#Turns the Bot, so its Front faces the Target
+def do_turntotarget(targetpoint):
+    while(abs(get_degtotarget(targetpoint))>5):
+        if get_degtotarget(targetpoint)>1:
+            do_move(0,0.2)
         else:
-            move(0,-0.2)
-        #print("grad zum ziel: "+str(get_gradzumziel(targetpoint))+" Entf z.Z. "+str(calc_distancebetweenpoints(get_selfpos(),targetpoint)))
+            do_move(0,-0.2)
 
-    #move(0,0)
     return
 
-
-def move_totarget(targetpoint):
-    #Idea from Bug Algo v2 Src: https://www.cs.cmu.edu/~motionplanning/lecture/Chap2-Bug-Alg_howie.pdf
+#Moves the Bot to the target(point) while avoiding Obstacles
+#Idea from Bug Algo v2 Src: https://www.cs.cmu.edu/~motionplanning/lecture/Chap2-Bug-Alg_howie.pdf
+def do_movetotarget(targetpoint):
 
     startpoint = get_selfpos()
 
+    #While no Obstacles are in the Way
     while(calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.4):
-
-        #While no Obstacles are in the Way
         rospy.loginfo("Moving Forward Mode!")
-        while frontisfree(0.5) and calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.4:
-            #turn to targetpoint
-            turn_totarget(targetpoint)
-            #print("grad zum ziel: "+str(get_gradzumziel(targetpoint))+" Entf z.Z. "+str(calc_distancebetweenpoints(get_selfpos(),targetpoint)))
+        while check_isfrontfree(0.5) and calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.4:
+            do_turntotarget(targetpoint)
 
             #moveforward until obstacle
-            move(0.7,0)
+            do_move(0.7,0)
         rospy.loginfo("Obstacle in Front detected!")
-        move(0,0)
+        do_move(0,0)
 
         #Circumvent Obstacle
         rospy.loginfo("Circumvent Mode!")
         incircumventmode=True
         startdistanz=calc_distancebetweenpoints(get_selfpos(),targetpoint)
         while incircumventmode and calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.4:
-            if(frontisfree(0.5) and leftisfree(0.8)):
+            if(check_isfrontfree(0.5) and check_isleftfree(0.8)):
                 #turn left - wrong way! Turn around
-                print("#1 Turn left Front:"+ str(frontisfree(0.5))+" Left: "+ str(leftisfree(0.8)))
-                move(0.2,0.4)
-            if(not frontisfree(0.5) and leftisfree(0.8)):
+                do_move(0.2,0.4)
+            if(not check_isfrontfree(0.5) and check_isleftfree(0.8)):
                 #hard right - not parralell to wall!
-                print("#2 Hard right! Front" + str(frontisfree(0.5))+" Left: "+ str(leftisfree(0.8)))
-                move(0,-0.3)
-            if(frontisfree(0.5) and not leftisfree(0.8)):
+                do_move(0,-0.3)
+            if(check_isfrontfree(0.5) and not check_isleftfree(0.8)):
                 #forward - im Following the wall!
-                print("#3 Following the obstacle")
-                move(0.7,0)
-            if(not frontisfree(0.5) and not leftisfree(0.8)):
+                do_move(0.7,0)
+            if(not check_isfrontfree(0.5) and not check_isleftfree(0.8)):
                 #hard left - at a corner! left the wall behind us!
-                print("#4 Hard right")
-                move(0,-0.3)
-            #check if nearer on Line to targetpoint
-            incircumventmode=not(is_between(targetpoint,startpoint,get_selfpos()) and ((startdistanz-calc_distancebetweenpoints(get_selfpos(),targetpoint)) > 0.3))
+                do_move(0,-0.3)
+
+            #check if nearer on Line to targetpoint, if so -> go directly to Target!
+            incircumventmode=not(check_isposbetween(targetpoint,startpoint,get_selfpos()) and ((startdistanz-calc_distancebetweenpoints(get_selfpos(),targetpoint)) > 0.3))
         rospy.loginfo("Done Circumventing!")
 
-        move(0,0)
-        rospy.loginfo("Ziel erreicht!")
+        do_move(0,0)
 
+        return
 
 def main():
 
+    #Initialize Global Variables used for the Slow Acceleration
     global movex,movez,movexact,movezact
     movex=0
     movez=0
     movexact=0
-    movezact =0
+    movezact=0
 
+    #Initialize the Callback Variables
     global scandata
     scandata = LaserScan()
     global modelstatesdata
@@ -241,19 +236,16 @@ def main():
     rospy.loginfo("Found first Goals!")
     mygoals=copy.deepcopy(goals)
 
-
-
     while (len(mygoals.goals)>0):
         #Sort by goal distance what is the nearest Goal
         mygoals.goals.sort(key=calc_distogoal)
+        #Then Select the nearest one and execute!
         rospy.loginfo("New Target x:"+str(mygoals.goals[0].x)+" y: "+str(mygoals.goals[0].y)+" z: "+str(mygoals.goals[0].z))
-        move_totarget(mygoals.goals[0])
+        do_movetotarget(mygoals.goals[0])
         mygoals.goals.pop(0)
 
-
-    rospy.loginfo("Done with Main")
+    rospy.loginfo("Done with all Goals! Hurray!!!!")
     return 1
-
 
 rospy.init_node('TurtelLogic')
 
@@ -265,5 +257,3 @@ rospy.Subscriber('/gazebo/model_states', ModelStates, callback_modelstates) #Sub
 rospy.Subscriber('/goals', PointArray, callback_goal) #Subscriber to ModelStates
 
 main()
-
-rospy.spin()
