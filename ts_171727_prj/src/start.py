@@ -57,6 +57,48 @@ def get_selfheading():
     pos = modelstatesdata.pose[index]
     return pos.orientation
 
+def frontisfree(meterlim):
+    #Checks if the 360/5 in front of the bot are free
+    tempdata = LaserScan()
+    tempdata = scandata                 #reading global scandata variable
+
+    leftborder=len(tempdata.ranges)-len(tempdata.ranges)/8
+    rightborder=len(tempdata.ranges)/8
+
+    #rospy.loginfo("scanning l: "+str(leftborder)+" r: "+str(rightborder)+" in deg: "+str(leftborder*tempdata.angle_increment)+" - "+str(leftborder*tempdata.angle_increment))
+    isfree=True
+    i=0
+    for wert in tempdata.ranges:
+        if (i>leftborder or i<rightborder) and (wert<meterlim or wert<tempdata.range_min):
+            isfree=False
+            #rospy.loginfo("Front of Robot is not free! Error bei index: "+str(i))
+            break
+
+        i=i+1
+    return isfree
+
+
+def leftisfree(meterlim):
+    #Checks if the 360/5 in front of the bot are free
+    tempdata = LaserScan()
+    tempdata = scandata                 #reading global scandata variable
+
+    leftborder=(len(tempdata.ranges)/8)*1
+    rightborder=(len(tempdata.ranges)/8)*2
+
+    #rospy.loginfo("scanning l: "+str(leftborder)+" r: "+str(rightborder)+" in deg: "+str(leftborder*tempdata.angle_increment)+" - "+str(leftborder*tempdata.angle_increment))
+    isfree=True
+    i=0
+    for wert in tempdata.ranges:
+        if i>leftborder and i<rightborder and (wert<meterlim or wert<tempdata.range_min):
+            isfree=False
+            #rospy.loginfo("right of Robot is not free! Error bei index: "+str(i))
+            break
+
+        i=i+1
+
+    return isfree
+
 def get_gradzumziel(targetpoint):
 
     self_heading=get_selfheading()
