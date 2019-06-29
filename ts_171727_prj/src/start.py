@@ -210,7 +210,7 @@ def do_movetotarget(targetpoint):
 
         do_move(0,0)
 
-        return
+    return
 
 def main():
 
