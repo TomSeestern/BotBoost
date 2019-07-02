@@ -89,8 +89,8 @@ def check_isfrontfree(rangelim):
     tempdata = LaserScan()
     tempdata = scandata                 #reading global scandata variable
 
-    leftborder=len(tempdata.ranges)-len(tempdata.ranges)/48
-    rightborder=len(tempdata.ranges)/48
+    leftborder=len(tempdata.ranges)-len(tempdata.ranges)/32
+    rightborder=len(tempdata.ranges)/32
 
     isfree=True
     i=0
@@ -136,9 +136,9 @@ def do_move(fwd,turn):
         movexact=movexact-0.05
 
     if movezact<turn:
-        movezact=movezact+0.005
+        movezact=movezact+0.05
     elif movezact>turn:
-        movezact=movezact-0.005
+        movezact=movezact-0.05
 
     #STOP NOW
     if fwd==0 and turn ==0:
@@ -180,7 +180,7 @@ def do_movetotarget(targetpoint):
     #While no Obstacles are in the Way
     while(calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.4):
         rospy.loginfo("Moving Forward Mode!")
-        while check_isfrontfree(0.7) and calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.4:
+        while check_isfrontfree(1.2) and calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.3:
             do_turntotarget(targetpoint)
 
             #moveforward until obstacle
@@ -192,19 +192,19 @@ def do_movetotarget(targetpoint):
         rospy.loginfo("Circumvent Mode!")
         incircumventmode=True
         startdistanz=calc_distancebetweenpoints(get_selfpos(),targetpoint)
-        while incircumventmode and calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.4:
-            if(check_isfrontfree(0.7) and check_isleftfree(0.8)):
+        while incircumventmode and calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.3:
+            if(check_isfrontfree(1.2) and check_isleftfree(1.5)):
                 #turn left - wrong way! Turn around
                 do_move(0.4,0.6)
-            if(not check_isfrontfree(0.7) and check_isleftfree(0.8)):
+            if(not check_isfrontfree(1.2) and check_isleftfree(1.5)):
                 #hard right - not parralell to wall!
-                do_move(0,-0.6)
-            if(check_isfrontfree(0.7) and not check_isleftfree(0.8)):
+                do_move(0.4,-1)
+            if(check_isfrontfree(1.2) and not check_isleftfree(1.5)):
                 #forward - im Following the wall!
                 do_move(0.6,0)
-            if(not check_isfrontfree(0.7) and not check_isleftfree(0.8)):
+            if(not check_isfrontfree(1.2) and not check_isleftfree(1.5)):
                 #hard right - at a corner! left the wall behind us!
-                do_move(0,-0.6)
+                do_move(0.4,-1)
 
             #check if near the Line to the targetpoint, if so -> go directly to Target!
             incircumventmode=not(check_isposbetween(targetpoint,startpoint,get_selfpos()) and ((startdistanz-calc_distancebetweenpoints(get_selfpos(),targetpoint)) > 0.3))
