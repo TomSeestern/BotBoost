@@ -1,5 +1,15 @@
 #!/usr/bin/env python
 
+#title           :pyscript.py
+#description     :This will navigate a Turtlebot in Gazeboo to published Targets
+#author          :Tom Segbers (tomsegbers@gmail.com)
+#date            :2019-06-02
+#version         :1
+#usage           :roslaunch ts_171727_prj start.launch
+#notes           :
+#python_version  :3.5.2
+#==============================================================================
+
 #Standart Libs
 import time     #TimeTracking
 import math     #Simple Calculations
