@@ -83,14 +83,14 @@ def get_degtotarget(targetpoint):
 def check_isposbetween(a,b,pos):
     return abs(calc_distancebetweenpoints(a,pos) + calc_distancebetweenpoints(pos,b) - calc_distancebetweenpoints(a,b))<0.4
 
-#Checks if the Front 90Deg. are free within the RangeLimit
+#Checks if the Front 45Deg. are free within the RangeLimit
 def check_isfrontfree(rangelim):
 
     tempdata = LaserScan()
     tempdata = scandata                 #reading global scandata variable
 
-    leftborder=len(tempdata.ranges)-len(tempdata.ranges)/8
-    rightborder=len(tempdata.ranges)/8
+    leftborder=len(tempdata.ranges)-len(tempdata.ranges)/48
+    rightborder=len(tempdata.ranges)/48
 
     isfree=True
     i=0
@@ -129,15 +129,16 @@ def do_move(fwd,turn):
     msg = Twist()
 
     #Slowly accelerate/slow down bot
-    if movexact<fwd:
+    #if fwd under -1: indicates that the Forward speed should not be touched!
+    if movexact<fwd and fwd > -1:
         movexact=movexact+0.05
-    elif movexact>fwd:
+    elif movexact>fwd and fwd > -1:
         movexact=movexact-0.05
 
     if movezact<turn:
-        movezact=movezact+0.01
+        movezact=movezact+0.005
     elif movezact>turn:
-        movezact=movezact-0.01
+        movezact=movezact-0.005
 
     #STOP NOW
     if fwd==0 and turn ==0:
@@ -163,9 +164,10 @@ def do_turntotarget(targetpoint):
     while(abs(get_degtotarget(targetpoint))>5):
         #if to right turn left, otherwise turn right
         if get_degtotarget(targetpoint)>1:
-            do_move(0,0.2)
+            #the -99 indicates that the Forward speed should not be touched
+            do_move(-99,0.5)
         else:
-            do_move(0,-0.2)
+            do_move(-99,-0.5)
 
     return
 
@@ -178,7 +180,7 @@ def do_movetotarget(targetpoint):
     #While no Obstacles are in the Way
     while(calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.4):
         rospy.loginfo("Moving Forward Mode!")
-        while check_isfrontfree(0.5) and calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.4:
+        while check_isfrontfree(0.7) and calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.4:
             do_turntotarget(targetpoint)
 
             #moveforward until obstacle
@@ -191,18 +193,18 @@ def do_movetotarget(targetpoint):
         incircumventmode=True
         startdistanz=calc_distancebetweenpoints(get_selfpos(),targetpoint)
         while incircumventmode and calc_distancebetweenpoints(get_selfpos(),targetpoint)>0.4:
-            if(check_isfrontfree(0.5) and check_isleftfree(0.8)):
+            if(check_isfrontfree(0.7) and check_isleftfree(0.8)):
                 #turn left - wrong way! Turn around
-                do_move(0.2,0.4)
-            if(not check_isfrontfree(0.5) and check_isleftfree(0.8)):
+                do_move(0.4,0.6)
+            if(not check_isfrontfree(0.7) and check_isleftfree(0.8)):
                 #hard right - not parralell to wall!
-                do_move(0,-0.3)
-            if(check_isfrontfree(0.5) and not check_isleftfree(0.8)):
+                do_move(0,-0.6)
+            if(check_isfrontfree(0.7) and not check_isleftfree(0.8)):
                 #forward - im Following the wall!
-                do_move(0.7,0)
-            if(not check_isfrontfree(0.5) and not check_isleftfree(0.8)):
-                #hard left - at a corner! left the wall behind us!
-                do_move(0,-0.3)
+                do_move(0.6,0)
+            if(not check_isfrontfree(0.7) and not check_isleftfree(0.8)):
+                #hard right - at a corner! left the wall behind us!
+                do_move(0,-0.6)
 
             #check if near the Line to the targetpoint, if so -> go directly to Target!
             incircumventmode=not(check_isposbetween(targetpoint,startpoint,get_selfpos()) and ((startdistanz-calc_distancebetweenpoints(get_selfpos(),targetpoint)) > 0.3))
