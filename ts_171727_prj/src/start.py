@@ -251,8 +251,6 @@ def main():
     mygoals=copy.deepcopy(goals)
 
     while (len(mygoals.goals)>0):
-        #Sort by goal distance what is the nearest Goal
-        mygoals.goals.sort(key=calc_distogoal)
         #Then Select the nearest one and execute!
         rospy.loginfo("New Target x:"+str(mygoals.goals[0].x)+" y: "+str(mygoals.goals[0].y)+" z: "+str(mygoals.goals[0].z))
         do_movetotarget(mygoals.goals[0])
