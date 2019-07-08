@@ -34,7 +34,7 @@
 - Problem: Drifting while accelerating.  
 - Solution: Constant acceleration towards target speed.   
 
-![StufenGeschw](img/StufenGeschw.png.png "StufenGeschw")  
+![StufenGeschw](img/StufenGeschw.png "StufenGeschw")  
 
 (CC BY-SA 4.0 - Michael Oestreicher <br> wikibooks - https://bit.ly/2XvuZ8L)
 
